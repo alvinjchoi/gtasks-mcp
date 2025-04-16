@@ -21,11 +21,37 @@ const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 const REDIRECT_URI = "http://localhost";
 const REQUIRED_SCOPES = ["https://www.googleapis.com/auth/tasks"];
 
-// Define path for file-based credentials
+// Define paths for credentials
 const credentialsPath = path.join(
   path.dirname(new URL(import.meta.url).pathname),
   "../.gtasks-server-credentials.json"
 );
+
+// Also check for a local config file in the user's home directory
+const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+const localConfigPath = path.join(homeDir, ".gtasks-credentials.json");
+
+// Debug environment variables
+console.error("=== ENVIRONMENT VARIABLES DEBUG ===");
+console.error(
+  `CLIENT_ID present: ${Boolean(CLIENT_ID)} (${
+    CLIENT_ID ? CLIENT_ID.substring(0, 8) + "..." : "not set"
+  })`
+);
+console.error(
+  `CLIENT_SECRET present: ${Boolean(CLIENT_SECRET)} (${
+    CLIENT_SECRET ? CLIENT_SECRET.substring(0, 5) + "..." : "not set"
+  })`
+);
+console.error(
+  `REFRESH_TOKEN present: ${Boolean(REFRESH_TOKEN)} (${
+    REFRESH_TOKEN ? REFRESH_TOKEN.substring(0, 8) + "..." : "not set"
+  })`
+);
+console.error(`Home directory: ${homeDir}`);
+console.error(`Looking for local config at: ${localConfigPath}`);
+console.error(`Local config exists: ${fs.existsSync(localConfigPath)}`);
+console.error("=== END DEBUG INFO ===");
 
 // Initialize auth client and Google Tasks API
 let oauth2Client: OAuth2Client | null = null;
@@ -51,50 +77,54 @@ async function initializeAuth() {
   if (isAuthenticated) return true;
 
   try {
-    // Initialize OAuth client - first try environment variables
+    // Check different sources for credentials in order of preference:
+    // 1. Environment variables
+    // 2. Local config file in user's home directory
+    // 3. Credentials file in the package directory
+
     if (CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN) {
+      // 1. Use environment variables if available
       console.error("Using credentials from environment variables");
       oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-      oauth2Client.setCredentials({
-        refresh_token: REFRESH_TOKEN,
-        scope: REQUIRED_SCOPES.join(" "),
-      });
-    } else {
-      // Fall back to file-based credentials
-      if (!fs.existsSync(credentialsPath)) {
-        console.error(
-          "Credentials not found and environment variables not set. Please either:\n" +
-            "1. Run with 'auth' argument first to create credentials file, or\n" +
-            "2. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN environment variables."
+      oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+    } else if (fs.existsSync(localConfigPath)) {
+      // 2. Try local config file in user's home directory
+      console.error("Using credentials from local config file");
+      try {
+        const localConfig = JSON.parse(
+          fs.readFileSync(localConfigPath, "utf-8")
         );
+        oauth2Client = new OAuth2Client(
+          localConfig.clientId,
+          localConfig.clientSecret,
+          REDIRECT_URI
+        );
+        oauth2Client.setCredentials({
+          refresh_token: localConfig.refreshToken,
+        });
+      } catch (error) {
+        console.error("Error reading local config:", error);
         return false;
       }
-
-      console.error("Using credentials from file");
+    } else if (fs.existsSync(credentialsPath)) {
+      // 3. Fall back to credentials file in the package directory
+      console.error("Using credentials from package credentials file");
       const credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf-8"));
       oauth2Client = new OAuth2Client();
       oauth2Client.setCredentials(credentials);
+    } else {
+      // No credentials found
+      console.error(
+        "Credentials not found. Please either:\n" +
+          "1. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN environment variables\n" +
+          "2. Create a .gtasks-credentials.json file in your home directory with your credentials\n" +
+          "3. Run with 'auth' argument first to create credentials file in the package directory"
+      );
+      return false;
     }
 
     // Initialize Google Tasks API
     tasks = google.tasks({ version: "v1", auth: oauth2Client });
-
-    // Test if we have the correct permissions
-    try {
-      console.error("Testing permissions by listing task lists...");
-      const taskLists = await tasks.tasklists.list({ maxResults: 1 });
-      console.error(`Found ${taskLists.data.items?.length || 0} task lists`);
-      if (taskLists.data.items?.length) {
-        console.error(
-          `First task list: ${taskLists.data.items[0].title} (${taskLists.data.items[0].id})`
-        );
-      } else {
-        console.error("No task lists found - may need to create one first");
-      }
-    } catch (error) {
-      console.error("Permission test failed:", error);
-      return false;
-    }
 
     isAuthenticated = true;
     return true;

@@ -3,9 +3,8 @@
 A Model Context Protocol (MCP) server for Google Tasks integration in Claude Desktop. This server enables AI assistants to manage Google Tasks through natural language interactions.
 
 ![](https://badge.mcpx.dev?type=server "MCP Server")
-[![npm version](https://badge.fury.io/js/gtasks-mcp.svg)](https://www.npmjs.com/package/gtasks-mcp)
+[![npm version](https://badge.fury.io/js/@alvincrave/gtasks-mcp.svg)](https://www.npmjs.com/package/@alvincrave/gtasks-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Install with Smithery](https://img.shields.io/badge/Install%20with-Smithery-blue)](https://smithery.ai/?utm_source=smithery-badge)
 
 ## Features
 
@@ -21,18 +20,8 @@ A Model Context Protocol (MCP) server for Google Tasks integration in Claude Des
 
 ## Installation
 
-### Installing via Smithery
-
-To install Google Tasks Integration for Claude Desktop automatically:
-
 ```bash
-npx -y @smithery/cli install gtasks-mcp --client claude
-```
-
-### Manual Installation
-
-```bash
-npm install gtasks-mcp
+npm install @alvincrave/gtasks-mcp
 ```
 
 ## Setup
@@ -71,7 +60,7 @@ npm install gtasks-mcp
   "mcpServers": {
     "gtasks": {
       "command": "npx",
-      "args": ["-y", "gtasks-mcp"],
+      "args": ["-y", "@alvincrave/gtasks-mcp"],
       "env": {
         "GOOGLE_CLIENT_ID": "your_client_id_here",
         "GOOGLE_CLIENT_SECRET": "your_client_secret_here",
@@ -138,22 +127,6 @@ delete the task about "old project"
 
 ```
 clear all completed tasks from my list
-```
-
-## Local Development
-
-For local development, create a `.env.local` file:
-
-```
-GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_CLIENT_SECRET=your_client_secret
-GOOGLE_REFRESH_TOKEN=your_refresh_token
-```
-
-Then run:
-
-```bash
-./run-local.sh
 ```
 
 ## Security Notes

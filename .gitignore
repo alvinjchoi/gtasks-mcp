@@ -9,3 +9,26 @@ test-*/
 .env.local
 .env
 claude_desktop_config.json
+
+# Dependency directories
+node_modules/
+
+# Distribution / Build directory
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Credentials and secrets
+*-credentials.json
+*.pem
+*.key
+claude-startup.sh
+*startup*.sh
