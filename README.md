@@ -139,6 +139,25 @@ Instead of going through the authentication flow, you can directly provide Googl
 
 With these environment variables set, the server will use them directly instead of looking for credential files.
 
+#### Using .env.local for Local Development
+
+For local development, you can create a `.env.local` file in the project root with your credentials:
+
+```
+# Google Tasks API Credentials
+GOOGLE_CLIENT_ID=your_client_id_here
+GOOGLE_CLIENT_SECRET=your_client_secret_here
+GOOGLE_REFRESH_TOKEN=your_refresh_token_here
+```
+
+Then use the included script to run the server with these credentials:
+
+```bash
+./run-local.sh
+```
+
+This script will automatically load the environment variables from `.env.local` and start the server.
+
 ### Usage with Desktop App
 
 To integrate this server with the desktop app, add the following to your app's server configuration (`claude_desktop_config.json`):
