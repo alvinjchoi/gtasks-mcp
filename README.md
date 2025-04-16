@@ -21,6 +21,14 @@ Forked from [Zach Caceres' (zcaceres) original implementation](https://github.co
 - Secure OAuth2 authentication
 - Docker support for containerized deployment
 
+## Task Creation Example
+
+Here's a simple example of task creation using natural language with Claude:
+
+![Task Creation Example](./assets/task-creation-example.png)
+
+With just a simple instruction like "create a task named 'eat a banana in the morning'", Claude can instantly create the task in your Google Tasks.
+
 ## Installation
 
 ### Installing via Smithery
