@@ -137,17 +137,57 @@ export class TaskActions {
       });
 
       const taskLists = taskListsResponse.data.items || [];
-      if (!taskLists.length) {
-        throw new Error("No task lists found in your Google Tasks account");
-      }
+      let taskListId: string;
 
-      // Use the first task list if none specified
-      let taskListId = request.params.arguments?.taskListId as string;
-      if (!taskListId || taskListId === "@default") {
-        taskListId = taskLists[0].id!;
-        console.error(
-          `Using first task list: ${taskLists[0].title} (${taskListId})`
-        );
+      // If no task lists found, create a default one
+      if (!taskLists.length) {
+        console.error("No task lists found, creating a default task list");
+        try {
+          const newTaskList = await tasks.tasklists.insert({
+            requestBody: {
+              title: "My Tasks",
+            },
+          });
+
+          if (!newTaskList.data.id) {
+            throw new Error("Failed to create a new task list");
+          }
+
+          taskListId = newTaskList.data.id;
+          console.error(
+            `Created new task list: ${newTaskList.data.title} (${taskListId})`
+          );
+        } catch (error) {
+          console.error("Error creating task list:", error);
+          throw new Error(
+            `Failed to create a task list. Make sure you have the correct permissions: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      } else {
+        // Use the specified task list or default to the first one
+        const requestedTaskListId = request.params.arguments
+          ?.taskListId as string;
+        if (requestedTaskListId && requestedTaskListId !== "@default") {
+          // Check if the requested task list exists
+          const foundTaskList = taskLists.find(
+            (list) => list.id === requestedTaskListId
+          );
+          if (foundTaskList) {
+            taskListId = requestedTaskListId;
+          } else {
+            taskListId = taskLists[0].id!;
+            console.error(
+              `Requested task list ${requestedTaskListId} not found, using first task list: ${taskLists[0].title} (${taskListId})`
+            );
+          }
+        } else {
+          taskListId = taskLists[0].id!;
+          console.error(
+            `Using first task list: ${taskLists[0].title} (${taskListId})`
+          );
+        }
       }
 
       const taskTitle = request.params.arguments?.title as string;
@@ -166,6 +206,7 @@ export class TaskActions {
         status: taskStatus || "needsAction",
       };
 
+      console.error(`Creating task "${taskTitle}" in task list ${taskListId}`);
       const taskResponse = await tasks.tasks.insert({
         tasklist: taskListId,
         requestBody: task,

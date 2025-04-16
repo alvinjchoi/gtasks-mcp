@@ -19,6 +19,7 @@ const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 const REDIRECT_URI = "http://localhost";
+const REQUIRED_SCOPES = ["https://www.googleapis.com/auth/tasks"];
 
 // Define path for file-based credentials
 const credentialsPath = path.join(
@@ -54,7 +55,10 @@ async function initializeAuth() {
     if (CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN) {
       console.error("Using credentials from environment variables");
       oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-      oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+      oauth2Client.setCredentials({
+        refresh_token: REFRESH_TOKEN,
+        scope: REQUIRED_SCOPES.join(" "),
+      });
     } else {
       // Fall back to file-based credentials
       if (!fs.existsSync(credentialsPath)) {
@@ -74,6 +78,24 @@ async function initializeAuth() {
 
     // Initialize Google Tasks API
     tasks = google.tasks({ version: "v1", auth: oauth2Client });
+
+    // Test if we have the correct permissions
+    try {
+      console.error("Testing permissions by listing task lists...");
+      const taskLists = await tasks.tasklists.list({ maxResults: 1 });
+      console.error(`Found ${taskLists.data.items?.length || 0} task lists`);
+      if (taskLists.data.items?.length) {
+        console.error(
+          `First task list: ${taskLists.data.items[0].title} (${taskLists.data.items[0].id})`
+        );
+      } else {
+        console.error("No task lists found - may need to create one first");
+      }
+    } catch (error) {
+      console.error("Permission test failed:", error);
+      return false;
+    }
+
     isAuthenticated = true;
     return true;
   } catch (error) {
