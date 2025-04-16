@@ -24,8 +24,9 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copy built files from the builder stage
-COPY --from=builder /app/dist /app/dist
-COPY --from=builder /app/package.json /app/package-lock.json /app
+COPY --from=builder /app/dist /app/dist/
+COPY --from=builder /app/package.json /app/
+COPY --from=builder /app/package-lock.json /app/
 
 # Install only production dependencies
 RUN npm ci --omit=dev
