@@ -1,8 +1,33 @@
 # Google Tasks MCP Server
 
-![gtasks mcp logo](./logo.jpg)
+> **Note**: This repository is a fork of the original Google Tasks MCP Server with additional Docker support for easier deployment and containerization.
 
 This MCP server integrates with Google Tasks to allow listing, reading, searching, creating, updating, and deleting tasks.
+
+## Updates in this Fork
+
+This fork adds the following improvements to the original repository:
+
+- **Docker Support**: Added complete Docker configuration for containerized deployment
+- **Simplified Deployment**: Created a build script (`docker-build.sh`) for easy building and running
+- **Environment Variables**: Enhanced support for passing Google API credentials via environment variables
+- **Code Cleanup**: Removed test files and improved the repository structure
+
+## Running with Docker
+
+You can build and run this server as a Docker container:
+
+```bash
+# Build the Docker image
+./docker-build.sh
+
+# Run the container with your Google API credentials
+docker run -p 3000:3000 \
+  -e GOOGLE_CLIENT_ID=your_client_id \
+  -e GOOGLE_CLIENT_SECRET=your_client_secret \
+  -e GOOGLE_REFRESH_TOKEN=your_refresh_token \
+  gtasks-mcp
+```
 
 ## Components
 
@@ -135,3 +160,11 @@ To integrate this server with the desktop app, add the following to your app's s
 ```
 
 Replace the values with your actual Google API credentials.
+
+## Original Repository
+
+This is a fork of the original Google Tasks MCP Server. Credit goes to the original author for creating the integration with Google Tasks API and the Model Context Protocol.
+
+## License
+
+This project is licensed under the same terms as the original repository.
