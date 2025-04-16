@@ -1,6 +1,6 @@
 {
   "name": "@alvincrave/gtasks-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for interacting with Google Tasks",
   "license": "MIT",
   "author": "@alvinjchoi",

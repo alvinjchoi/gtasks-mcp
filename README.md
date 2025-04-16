@@ -5,6 +5,7 @@ A Model Context Protocol (MCP) server for Google Tasks integration in Claude Des
 ![](https://badge.mcpx.dev?type=server "MCP Server")
 [![npm version](https://badge.fury.io/js/@alvincrave/gtasks-mcp.svg)](https://www.npmjs.com/package/@alvincrave/gtasks-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Install with Smithery](https://img.shields.io/badge/Install%20with-Smithery-blue)](https://smithery.ai/?utm_source=smithery-badge)
 
 ## Features
 
@@ -19,6 +20,16 @@ A Model Context Protocol (MCP) server for Google Tasks integration in Claude Des
 - Docker support for containerized deployment
 
 ## Installation
+
+### Installing via Smithery
+
+To install Google Tasks Integration for Claude Desktop automatically:
+
+```bash
+npx -y @smithery/cli install @alvincrave/gtasks-mcp --client claude
+```
+
+### Manual Installation
 
 ```bash
 npm install @alvincrave/gtasks-mcp

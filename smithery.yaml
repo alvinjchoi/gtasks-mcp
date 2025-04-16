@@ -20,8 +20,8 @@ startCommand:
     # A function that produces the CLI command to start the MCP on stdio.
     |-
     config => ({
-      command: 'node_modules/.bin/gtasks-mcp',
-      args: [],
+      command: 'npx',
+      args: ['-y', '@alvincrave/gtasks-mcp'],
       env: {
         GOOGLE_CLIENT_ID: config.googleClientId,
         GOOGLE_CLIENT_SECRET: config.googleClientSecret,
