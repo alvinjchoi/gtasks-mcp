@@ -52,7 +52,7 @@ async function initializeAuth() {
   try {
     // Initialize OAuth client - first try environment variables
     if (CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN) {
-      console.log("Using credentials from environment variables");
+      console.error("Using credentials from environment variables");
       oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
       oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
     } else {
@@ -66,7 +66,7 @@ async function initializeAuth() {
         return false;
       }
 
-      console.log("Using credentials from file");
+      console.error("Using credentials from file");
       const credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf-8"));
       oauth2Client = new OAuth2Client();
       oauth2Client.setCredentials(credentials);

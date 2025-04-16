@@ -8,3 +8,4 @@ test-*/
 *.test.js
 .env.local
 .env
+claude_desktop_config.json
