@@ -3,7 +3,7 @@
 A Model Context Protocol (MCP) server for Google Tasks integration in Claude Desktop. This server enables AI assistants to manage Google Tasks through natural language interactions.
 
 ![](https://badge.mcpx.dev?type=server "MCP Server")
-[![npm version](https://badge.fury.io/js/@alvincrave/gtasks-mcp.svg)](https://www.npmjs.com/package/@alvincrave/gtasks-mcp)
+[![npm version](https://img.shields.io/npm/v/@alvincrave/gtasks-mcp)](https://www.npmjs.com/package/@alvincrave/gtasks-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![smithery badge](https://smithery.ai/badge/@alvincrave/gtasks-mcp)](https://smithery.ai/server/@alvincrave/gtasks-mcp)
 
