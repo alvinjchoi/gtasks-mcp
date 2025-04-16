@@ -113,7 +113,7 @@ To integrate this server with the desktop app, add the following to your app's s
   "mcpServers": {
     "gtasks": {
       "command": "npx",
-      "args": ["gtasks-mcp"],
+      "args": ["@alvinjchoi/gtasks-mcp"],
       "env": {
         "GOOGLE_CLIENT_ID": "YOUR_GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET": "YOUR_GOOGLE_CLIENT_SECRET",
