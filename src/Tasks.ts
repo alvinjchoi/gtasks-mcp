@@ -46,7 +46,7 @@ export class TaskResources {
 
   static async list(
     request: ListResourcesRequest,
-    tasks: tasks_v1.Tasks,
+    tasks: tasks_v1.Tasks
   ): Promise<[tasks_v1.Schema$Task[], string | null]> {
     const pageSize = 10;
     const params: any = {
@@ -86,7 +86,17 @@ export class TaskResources {
 
 export class TaskActions {
   private static formatTask(task: tasks_v1.Schema$Task) {
-    return `${task.title}\n (Due: ${task.due || "Not set"}) - Notes: ${task.notes} - ID: ${task.id} - Status: ${task.status} - URI: ${task.selfLink} - Hidden: ${task.hidden} - Parent: ${task.parent} - Deleted?: ${task.deleted} - Completed Date: ${task.completed} - Position: ${task.position} - Updated Date: ${task.updated} - ETag: ${task.etag} - Links: ${task.links} - Kind: ${task.kind}}`;
+    return `${task.title}\n (Due: ${task.due || "Not set"}) - Notes: ${
+      task.notes
+    } - ID: ${task.id} - Status: ${task.status} - URI: ${
+      task.selfLink
+    } - Hidden: ${task.hidden} - Parent: ${task.parent} - Deleted?: ${
+      task.deleted
+    } - Completed Date: ${task.completed} - Position: ${
+      task.position
+    } - Updated Date: ${task.updated} - ETag: ${task.etag} - Links: ${
+      task.links
+    } - Kind: ${task.kind}}`;
   }
 
   private static formatTaskList(taskList: tasks_v1.Schema$Task[]) {
@@ -120,161 +130,315 @@ export class TaskActions {
   }
 
   static async create(request: CallToolRequest, tasks: tasks_v1.Tasks) {
-    const taskListId =
-      (request.params.arguments?.taskListId as string) || "@default";
-    const taskTitle = request.params.arguments?.title as string;
-    const taskNotes = request.params.arguments?.notes as string;
-    const taskStatus = request.params.arguments?.status as string;
-    const taskDue = request.params.arguments?.due as string;
+    try {
+      // First, get available task lists to ensure we have a valid list
+      const taskListsResponse = await tasks.tasklists.list({
+        maxResults: MAX_TASK_RESULTS,
+      });
 
-    if (!taskTitle) {
-      throw new Error("Task title is required");
+      const taskLists = taskListsResponse.data.items || [];
+      if (!taskLists.length) {
+        throw new Error("No task lists found in your Google Tasks account");
+      }
+
+      // Use the first task list if none specified
+      let taskListId = request.params.arguments?.taskListId as string;
+      if (!taskListId || taskListId === "@default") {
+        taskListId = taskLists[0].id!;
+        console.error(
+          `Using first task list: ${taskLists[0].title} (${taskListId})`
+        );
+      }
+
+      const taskTitle = request.params.arguments?.title as string;
+      const taskNotes = request.params.arguments?.notes as string;
+      const taskStatus = request.params.arguments?.status as string;
+      const taskDue = request.params.arguments?.due as string;
+
+      if (!taskTitle) {
+        throw new Error("Task title is required");
+      }
+
+      const task = {
+        title: taskTitle,
+        notes: taskNotes,
+        due: taskDue,
+        status: taskStatus || "needsAction",
+      };
+
+      const taskResponse = await tasks.tasks.insert({
+        tasklist: taskListId,
+        requestBody: task,
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Task created: ${taskResponse.data.title}`,
+          },
+        ],
+        isError: false,
+      };
+    } catch (error) {
+      console.error("Error creating task:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error creating task: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      };
     }
-
-    const task = {
-      title: taskTitle,
-      notes: taskNotes,
-      due: taskDue,
-    };
-
-    const taskResponse = await tasks.tasks.insert({
-      tasklist: taskListId,
-      requestBody: task,
-    });
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Task created: ${taskResponse.data.title}`,
-        },
-      ],
-      isError: false,
-    };
   }
 
   static async update(request: CallToolRequest, tasks: tasks_v1.Tasks) {
-    const taskListId =
-      (request.params.arguments?.taskListId as string) || "@default";
-    const taskUri = request.params.arguments?.uri as string;
-    const taskId = request.params.arguments?.id as string;
-    const taskTitle = request.params.arguments?.title as string;
-    const taskNotes = request.params.arguments?.notes as string;
-    const taskStatus = request.params.arguments?.status as string;
-    const taskDue = request.params.arguments?.due as string;
+    try {
+      // First, get available task lists to ensure we have a valid list
+      const taskListsResponse = await tasks.tasklists.list({
+        maxResults: MAX_TASK_RESULTS,
+      });
 
-    if (!taskUri) {
-      throw new Error("Task URI is required");
+      const taskLists = taskListsResponse.data.items || [];
+      if (!taskLists.length) {
+        throw new Error("No task lists found in your Google Tasks account");
+      }
+
+      // Use the first task list if none specified
+      let taskListId = request.params.arguments?.taskListId as string;
+      if (!taskListId || taskListId === "@default") {
+        taskListId = taskLists[0].id!;
+        console.error(
+          `Using first task list: ${taskLists[0].title} (${taskListId})`
+        );
+      }
+
+      const taskUri = request.params.arguments?.uri as string;
+      const taskId = request.params.arguments?.id as string;
+      const taskTitle = request.params.arguments?.title as string;
+      const taskNotes = request.params.arguments?.notes as string;
+      const taskStatus = request.params.arguments?.status as string;
+      const taskDue = request.params.arguments?.due as string;
+
+      if (!taskId) {
+        throw new Error("Task ID is required");
+      }
+
+      const task = {
+        id: taskId,
+        title: taskTitle,
+        notes: taskNotes,
+        status: taskStatus,
+        due: taskDue,
+      };
+
+      const taskResponse = await tasks.tasks.update({
+        tasklist: taskListId,
+        task: taskId, // Use taskId directly instead of URI
+        requestBody: task,
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Task updated: ${taskResponse.data.title}`,
+          },
+        ],
+        isError: false,
+      };
+    } catch (error) {
+      console.error("Error updating task:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error updating task: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      };
     }
-
-    if (!taskId) {
-      throw new Error("Task ID is required");
-    }
-
-    const task = {
-      id: taskId,
-      title: taskTitle,
-      notes: taskNotes,
-      status: taskStatus,
-      due: taskDue,
-    };
-
-    const taskResponse = await tasks.tasks.update({
-      tasklist: taskListId,
-      task: taskUri,
-      requestBody: task,
-    });
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Task updated: ${taskResponse.data.title}`,
-        },
-      ],
-      isError: false,
-    };
   }
 
   static async list(request: CallToolRequest, tasks: tasks_v1.Tasks) {
-    const allTasks = await this._list(request, tasks);
-    const taskList = this.formatTaskList(allTasks);
+    try {
+      const allTasks = await this._list(request, tasks);
+      const taskList = this.formatTaskList(allTasks);
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Found ${allTasks.length} tasks:\n${taskList}`,
-        },
-      ],
-      isError: false,
-    };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Found ${allTasks.length} tasks:\n${taskList}`,
+          },
+        ],
+        isError: false,
+      };
+    } catch (error) {
+      console.error("Error listing tasks:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error listing tasks: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      };
+    }
   }
 
   static async delete(request: CallToolRequest, tasks: tasks_v1.Tasks) {
-    const taskListId =
-      (request.params.arguments?.taskListId as string) || "@default";
-    const taskId = request.params.arguments?.id as string;
+    try {
+      // First, get available task lists to ensure we have a valid list
+      const taskListsResponse = await tasks.tasklists.list({
+        maxResults: MAX_TASK_RESULTS,
+      });
 
-    if (!taskId) {
-      throw new Error("Task URI is required");
+      const taskLists = taskListsResponse.data.items || [];
+      if (!taskLists.length) {
+        throw new Error("No task lists found in your Google Tasks account");
+      }
+
+      // Use the first task list if none specified
+      let taskListId = request.params.arguments?.taskListId as string;
+      if (!taskListId || taskListId === "@default") {
+        taskListId = taskLists[0].id!;
+        console.error(
+          `Using first task list: ${taskLists[0].title} (${taskListId})`
+        );
+      }
+
+      const taskId = request.params.arguments?.id as string;
+
+      if (!taskId) {
+        throw new Error("Task ID is required");
+      }
+
+      await tasks.tasks.delete({
+        tasklist: taskListId,
+        task: taskId,
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Task ${taskId} deleted`,
+          },
+        ],
+        isError: false,
+      };
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error deleting task: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      };
     }
-
-    await tasks.tasks.delete({
-      tasklist: taskListId,
-      task: taskId,
-    });
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Task ${taskId} deleted`,
-        },
-      ],
-      isError: false,
-    };
   }
 
   static async search(request: CallToolRequest, tasks: tasks_v1.Tasks) {
-    const userQuery = request.params.arguments?.query as string;
+    try {
+      const userQuery = request.params.arguments?.query as string;
 
-    const allTasks = await this._list(request, tasks);
-    const filteredItems = allTasks.filter(
-      (task) =>
-        task.title?.toLowerCase().includes(userQuery.toLowerCase()) ||
-        task.notes?.toLowerCase().includes(userQuery.toLowerCase()),
-    );
+      const allTasks = await this._list(request, tasks);
+      const filteredItems = allTasks.filter(
+        (task) =>
+          task.title?.toLowerCase().includes(userQuery.toLowerCase()) ||
+          task.notes?.toLowerCase().includes(userQuery.toLowerCase())
+      );
 
-    const taskList = this.formatTaskList(filteredItems);
+      const taskList = this.formatTaskList(filteredItems);
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Found ${allTasks.length} tasks:\n${taskList}`,
-        },
-      ],
-      isError: false,
-    };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Found ${filteredItems.length} tasks matching "${userQuery}":\n${taskList}`,
+          },
+        ],
+        isError: false,
+      };
+    } catch (error) {
+      console.error("Error searching tasks:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error searching tasks: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      };
+    }
   }
 
   static async clear(request: CallToolRequest, tasks: tasks_v1.Tasks) {
-    const taskListId =
-      (request.params.arguments?.taskListId as string) || "@default";
+    try {
+      // First, get available task lists to ensure we have a valid list
+      const taskListsResponse = await tasks.tasklists.list({
+        maxResults: MAX_TASK_RESULTS,
+      });
 
-    await tasks.tasks.clear({
-      tasklist: taskListId,
-    });
+      const taskLists = taskListsResponse.data.items || [];
+      if (!taskLists.length) {
+        throw new Error("No task lists found in your Google Tasks account");
+      }
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Tasks from tasklist ${taskListId} cleared`,
-        },
-      ],
-      isError: false,
-    };
+      // Use the first task list if none specified
+      let taskListId = request.params.arguments?.taskListId as string;
+      if (!taskListId || taskListId === "@default") {
+        taskListId = taskLists[0].id!;
+        console.error(
+          `Using first task list: ${taskLists[0].title} (${taskListId})`
+        );
+      }
+
+      await tasks.tasks.clear({
+        tasklist: taskListId,
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Cleared all completed tasks from list`,
+          },
+        ],
+        isError: false,
+      };
+    } catch (error) {
+      console.error("Error clearing tasks:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error clearing tasks: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      };
+    }
   }
 }
