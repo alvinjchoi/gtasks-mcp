@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
-import { authenticate } from "@google-cloud/local-auth";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
@@ -13,13 +11,29 @@ import {
 import fs from "fs";
 import { google, tasks_v1 } from "googleapis";
 import path from "path";
+import { OAuth2Client } from "google-auth-library";
 import { TaskActions, TaskResources } from "./Tasks.js";
 
-const tasks = google.tasks("v1");
+// OAuth2 credentials from environment variables
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
+const REDIRECT_URI = "http://localhost";
 
+// Define path for file-based credentials
+const credentialsPath = path.join(
+  path.dirname(new URL(import.meta.url).pathname),
+  "../.gtasks-server-credentials.json"
+);
+
+// Initialize auth client and Google Tasks API
+let oauth2Client: OAuth2Client;
+let tasks: tasks_v1.Tasks;
+
+// Set up the server
 const server = new Server(
   {
-    name: "example-servers/gtasks",
+    name: "gtasks-mcp",
     version: "0.1.0",
   },
   {
@@ -27,9 +41,10 @@ const server = new Server(
       resources: {},
       tools: {},
     },
-  },
+  }
 );
 
+// Handle listing resources (tasks)
 server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
   const [allTasks, nextPageToken] = await TaskResources.list(request, tasks);
   return {
@@ -42,6 +57,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
   };
 });
 
+// Handle reading a specific task
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   const task = await TaskResources.read(request, tasks);
 
@@ -74,6 +90,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   };
 });
 
+// Handle listing available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
@@ -205,47 +222,59 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   };
 });
 
+// Handle tool call requests
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name === "search") {
-    const taskResult = await TaskActions.search(request, tasks);
-    return taskResult;
+  try {
+    if (request.params.name === "search") {
+      const taskResult = await TaskActions.search(request, tasks);
+      return taskResult;
+    }
+    if (request.params.name === "list") {
+      const taskResult = await TaskActions.list(request, tasks);
+      return taskResult;
+    }
+    if (request.params.name === "create") {
+      const taskResult = await TaskActions.create(request, tasks);
+      return taskResult;
+    }
+    if (request.params.name === "update") {
+      const taskResult = await TaskActions.update(request, tasks);
+      return taskResult;
+    }
+    if (request.params.name === "delete") {
+      const taskResult = await TaskActions.delete(request, tasks);
+      return taskResult;
+    }
+    if (request.params.name === "clear") {
+      const taskResult = await TaskActions.clear(request, tasks);
+      return taskResult;
+    }
+    throw new Error("Tool not found");
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        },
+      ],
+      isError: true,
+    };
   }
-  if (request.params.name === "list") {
-    const taskResult = await TaskActions.list(request, tasks);
-    return taskResult;
-  }
-  if (request.params.name === "create") {
-    const taskResult = await TaskActions.create(request, tasks);
-    return taskResult;
-  }
-  if (request.params.name === "update") {
-    const taskResult = await TaskActions.update(request, tasks);
-    return taskResult;
-  }
-  if (request.params.name === "delete") {
-    const taskResult = await TaskActions.delete(request, tasks);
-    return taskResult;
-  }
-  if (request.params.name === "clear") {
-    const taskResult = await TaskActions.clear(request, tasks);
-    return taskResult;
-  }
-  throw new Error("Tool not found");
 });
 
-const credentialsPath = path.join(
-  path.dirname(new URL(import.meta.url).pathname),
-  "../.gtasks-server-credentials.json",
-);
-
+// Function to authenticate using the OAuth2 flow and save credentials
 async function authenticateAndSaveCredentials() {
   console.log("Launching auth flow…");
   const p = path.join(
     path.dirname(new URL(import.meta.url).pathname),
-    "../gcp-oauth.keys.json",
+    "../gcp-oauth.keys.json"
   );
 
   console.log(p);
+  const { authenticate } = await import("@google-cloud/local-auth");
   const auth = await authenticate({
     keyfilePath: p,
     scopes: ["https://www.googleapis.com/auth/tasks"],
@@ -254,25 +283,47 @@ async function authenticateAndSaveCredentials() {
   console.log("Credentials saved. You can now run the server.");
 }
 
-async function loadCredentialsAndRunServer() {
-  if (!fs.existsSync(credentialsPath)) {
-    console.error(
-      "Credentials not found. Please run with 'auth' argument first.",
-    );
-    process.exit(1);
+// Main function to initialize and start the server
+async function initializeAndRunServer() {
+  // Check if we're in auth mode
+  if (process.argv[2] === "auth") {
+    await authenticateAndSaveCredentials().catch(console.error);
+    return;
   }
 
-  const credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf-8"));
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials(credentials);
-  google.options({ auth });
+  // Initialize OAuth client - first try environment variables
+  if (CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN) {
+    console.log("Using credentials from environment variables");
+    oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+    oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+  } else {
+    // Fall back to file-based credentials
+    if (!fs.existsSync(credentialsPath)) {
+      console.error(
+        "Credentials not found and environment variables not set. Please either:\n" +
+          "1. Run with 'auth' argument first to create credentials file, or\n" +
+          "2. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN environment variables."
+      );
+      process.exit(1);
+    }
 
+    console.log("Using credentials from file");
+    const credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf-8"));
+    oauth2Client = new OAuth2Client();
+    oauth2Client.setCredentials(credentials);
+  }
+
+  // Initialize Google Tasks API
+  tasks = google.tasks({ version: "v1", auth: oauth2Client });
+
+  // Start the server
   const transport = new StdioServerTransport();
   await server.connect(transport);
+  console.error("Google Tasks MCP Server running on stdio");
 }
 
-if (process.argv[2] === "auth") {
-  authenticateAndSaveCredentials().catch(console.error);
-} else {
-  loadCredentialsAndRunServer().catch(console.error);
-}
+// Run the server
+initializeAndRunServer().catch((error) => {
+  console.error("Fatal error running server:", error);
+  process.exit(1);
+});

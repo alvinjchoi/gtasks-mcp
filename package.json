@@ -1,14 +1,14 @@
 {
-  "name": "@modelcontextprotocol/server-gtasks",
+  "name": "gtasks-mcp",
   "version": "0.0.1",
   "description": "MCP server for interacting with Google Tasks",
   "license": "MIT",
-  "author": "zcaceres (@zachcaceres zach.dev)",
-  "homepage": "https://modelcontextprotocol.io",
-  "bugs": "https://github.com/modelcontextprotocol/servers/issues",
+  "author": "@alvinjchoi",
+  "homepage": "https://github.com/alvinjchoi/gtasks-mcp",
+  "bugs": "https://github.com/alvinjchoi/gtasks-mcp/issues",
   "type": "module",
   "bin": {
-    "mcp-server-gtasks": "dist/index.js"
+    "gtasks-mcp": "dist/index.js"
   },
   "files": [
     "dist"
@@ -22,6 +22,7 @@
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
     "@modelcontextprotocol/sdk": "1.0.1",
+    "google-auth-library": "^9.4.1",
     "googleapis": "^144.0.0"
   },
   "devDependencies": {

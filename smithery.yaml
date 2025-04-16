@@ -5,14 +5,30 @@ startCommand:
   configSchema:
     # JSON Schema defining the configuration options for the MCP.
     type: object
-    required:
-      - oauthCredentialsPath
     properties:
       oauthCredentialsPath:
         type: string
         default: ./gcp-oauth.keys.json
         description: The path to the OAuth credentials JSON file.
+      googleClientId:
+        type: string
+        description: Google API Client ID. If provided with secret and refresh token, file-based auth is skipped.
+      googleClientSecret:
+        type: string
+        description: Google API Client Secret.
+      googleRefreshToken:
+        type: string
+        description: Google API Refresh Token.
   commandFunction:
     # A function that produces the CLI command to start the MCP on stdio.
     |-
-    config => ({ command: 'node', args: ['dist/index.js'], env: { GCP_OAUTH_KEYS: config.oauthCredentialsPath } })
+    config => ({ 
+      command: 'node', 
+      args: ['dist/index.js'], 
+      env: { 
+        GCP_OAUTH_KEYS: config.oauthCredentialsPath,
+        GOOGLE_CLIENT_ID: config.googleClientId,
+        GOOGLE_CLIENT_SECRET: config.googleClientSecret,
+        GOOGLE_REFRESH_TOKEN: config.googleRefreshToken
+      } 
+    })
