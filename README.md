@@ -2,6 +2,8 @@
 
 A Model Context Protocol (MCP) server for Google Tasks integration in Claude Desktop. This server enables AI assistants to manage Google Tasks through natural language interactions.
 
+Forked from [Zach Caceres' (zcaceres) original implementation](https://github.com/zcaceres/gtasks-mcp) to enhance authentication handling, add support for multiple task lists, and provide a more robust npm package with Smithery integration for Claude Desktop. This fork is fully functional and properly deployed on Smithery, making it ready for immediate use with Claude.
+
 ![](https://badge.mcpx.dev?type=server "MCP Server")
 [![smithery badge](https://smithery.ai/badge/@alvincrave/gtasks-mcp)](https://smithery.ai/server/@alvincrave/gtasks-mcp)
 [![npm version](https://img.shields.io/npm/v/@alvincrave/gtasks-mcp)](https://www.npmjs.com/package/@alvincrave/gtasks-mcp)
