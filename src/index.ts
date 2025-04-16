@@ -27,8 +27,9 @@ const credentialsPath = path.join(
 );
 
 // Initialize auth client and Google Tasks API
-let oauth2Client: OAuth2Client;
-let tasks: tasks_v1.Tasks;
+let oauth2Client: OAuth2Client | null = null;
+let tasks: tasks_v1.Tasks | null = null;
+let isAuthenticated = false;
 
 // Set up the server
 const server = new Server(
@@ -44,9 +45,55 @@ const server = new Server(
   }
 );
 
+// Function to authenticate and initialize the Google Tasks API
+async function initializeAuth() {
+  if (isAuthenticated) return true;
+
+  try {
+    // Initialize OAuth client - first try environment variables
+    if (CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN) {
+      console.log("Using credentials from environment variables");
+      oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+      oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+    } else {
+      // Fall back to file-based credentials
+      if (!fs.existsSync(credentialsPath)) {
+        console.error(
+          "Credentials not found and environment variables not set. Please either:\n" +
+            "1. Run with 'auth' argument first to create credentials file, or\n" +
+            "2. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN environment variables."
+        );
+        return false;
+      }
+
+      console.log("Using credentials from file");
+      const credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf-8"));
+      oauth2Client = new OAuth2Client();
+      oauth2Client.setCredentials(credentials);
+    }
+
+    // Initialize Google Tasks API
+    tasks = google.tasks({ version: "v1", auth: oauth2Client });
+    isAuthenticated = true;
+    return true;
+  } catch (error) {
+    console.error("Authentication error:", error);
+    return false;
+  }
+}
+
 // Handle listing resources (tasks)
 server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
-  const [allTasks, nextPageToken] = await TaskResources.list(request, tasks);
+  // Authenticate first
+  if (!(await initializeAuth())) {
+    return {
+      resources: [],
+      error:
+        "Authentication required. Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN.",
+    };
+  }
+
+  const [allTasks, nextPageToken] = await TaskResources.list(request, tasks!);
   return {
     resources: allTasks.map((task) => ({
       uri: `gtasks:///${task.id}`,
@@ -59,7 +106,20 @@ server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
 
 // Handle reading a specific task
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  const task = await TaskResources.read(request, tasks);
+  // Authenticate first
+  if (!(await initializeAuth())) {
+    return {
+      contents: [
+        {
+          uri: request.params.uri,
+          mimeType: "text/plain",
+          text: "Authentication required. Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN.",
+        },
+      ],
+    };
+  }
+
+  const task = await TaskResources.read(request, tasks!);
 
   const taskDetails = [
     `Title: ${task.title || "No title"}`,
@@ -90,7 +150,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   };
 });
 
-// Handle listing available tools
+// Handle listing available tools - no authentication required
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
@@ -225,28 +285,41 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 // Handle tool call requests
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
+    // Authenticate first
+    if (!(await initializeAuth())) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Authentication required. Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN.",
+          },
+        ],
+        isError: true,
+      };
+    }
+
     if (request.params.name === "search") {
-      const taskResult = await TaskActions.search(request, tasks);
+      const taskResult = await TaskActions.search(request, tasks!);
       return taskResult;
     }
     if (request.params.name === "list") {
-      const taskResult = await TaskActions.list(request, tasks);
+      const taskResult = await TaskActions.list(request, tasks!);
       return taskResult;
     }
     if (request.params.name === "create") {
-      const taskResult = await TaskActions.create(request, tasks);
+      const taskResult = await TaskActions.create(request, tasks!);
       return taskResult;
     }
     if (request.params.name === "update") {
-      const taskResult = await TaskActions.update(request, tasks);
+      const taskResult = await TaskActions.update(request, tasks!);
       return taskResult;
     }
     if (request.params.name === "delete") {
-      const taskResult = await TaskActions.delete(request, tasks);
+      const taskResult = await TaskActions.delete(request, tasks!);
       return taskResult;
     }
     if (request.params.name === "clear") {
-      const taskResult = await TaskActions.clear(request, tasks);
+      const taskResult = await TaskActions.clear(request, tasks!);
       return taskResult;
     }
     throw new Error("Tool not found");
@@ -291,32 +364,7 @@ async function initializeAndRunServer() {
     return;
   }
 
-  // Initialize OAuth client - first try environment variables
-  if (CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN) {
-    console.log("Using credentials from environment variables");
-    oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-    oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
-  } else {
-    // Fall back to file-based credentials
-    if (!fs.existsSync(credentialsPath)) {
-      console.error(
-        "Credentials not found and environment variables not set. Please either:\n" +
-          "1. Run with 'auth' argument first to create credentials file, or\n" +
-          "2. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN environment variables."
-      );
-      process.exit(1);
-    }
-
-    console.log("Using credentials from file");
-    const credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf-8"));
-    oauth2Client = new OAuth2Client();
-    oauth2Client.setCredentials(credentials);
-  }
-
-  // Initialize Google Tasks API
-  tasks = google.tasks({ version: "v1", auth: oauth2Client });
-
-  // Start the server
+  // Start the server without initializing authentication
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("Google Tasks MCP Server running on stdio");
