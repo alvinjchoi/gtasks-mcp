@@ -5,7 +5,7 @@ A Model Context Protocol (MCP) server for Google Tasks integration in Claude Des
 ![](https://badge.mcpx.dev?type=server "MCP Server")
 [![npm version](https://badge.fury.io/js/@alvincrave/gtasks-mcp.svg)](https://www.npmjs.com/package/@alvincrave/gtasks-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Smithery](https://smithery.ai/badge.svg)](https://smithery.ai/server/@alvinjchoi/gtasks-mcp)
+[![smithery badge](https://smithery.ai/badge/@alvincrave/gtasks-mcp)](https://smithery.ai/server/@alvincrave/gtasks-mcp)
 
 ## Features
 
