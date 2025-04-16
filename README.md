@@ -77,6 +77,16 @@ The server provides access to Google Tasks resources:
 
 Make sure to build the server with either `npm run build` or `npm run watch`.
 
+### Important Note for Smithery Users
+
+When using this server with Smithery deployment, you **must** provide the following configuration parameters:
+
+- `googleClientId`: Your Google API Client ID
+- `googleClientSecret`: Your Google API Client Secret
+- `googleRefreshToken`: A valid refresh token for Google API
+
+The server will list tools without these credentials, but will require them when actually calling the tools.
+
 ### Installing via Smithery
 
 To install Google Tasks Server on your Smithery instance:
