@@ -28,8 +28,13 @@ COPY --from=builder /app/dist /app/dist/
 COPY --from=builder /app/package.json /app/
 COPY --from=builder /app/package-lock.json /app/
 
-# Install only production dependencies
-RUN npm ci --omit=dev
+# Install only production dependencies without running scripts
+RUN npm ci --omit=dev --ignore-scripts
 
-# Set the command to run the app
-CMD ["node", "dist/index.js"]
+# Expose environment variables (to be provided at runtime)
+ENV GOOGLE_CLIENT_ID=""
+ENV GOOGLE_CLIENT_SECRET=""
+ENV GOOGLE_REFRESH_TOKEN=""
+
+# Set the entrypoint to run the server
+ENTRYPOINT ["node", "dist/index.js"]
